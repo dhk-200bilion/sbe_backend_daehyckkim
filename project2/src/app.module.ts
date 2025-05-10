@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { HomeNewsletterController } from './home-newsletter/home-newsletter.controller';
 import { HomeNewsletterModule } from './home-newsletter/home-newsletter.module';
 
 @Module({
-  imports: [HomeNewsletterModule],
-  controllers: [AppController, HomeNewsletterController],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, // 전역적으로 사용 가능하도록 설정
+    }),
+    HomeNewsletterModule,
+  ],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
