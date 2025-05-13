@@ -28,10 +28,71 @@
 ## 문제2
 
 - 종류 : API 설계/구현
-- 문제 : 급식단가정보를 활용해, 학교 가정통신문 서비스에서 활용할 수있는 GET 방식 API 1개를 자유롭게 설계
+- 문제 : 급식식단가정보를 활용해, 학교 가정통신문 서비스에서 활용할 수있는 GET 방식 API 1개를 자유롭게 설계
   (실사용자 관점에서 의미 있게 데이터를 가공 및 응답 구성)
 - 언어 : Nest.js + TypeScript
 - 조건 : 외부 API활용
+
+- API
+
+  - 기능
+
+    - 사용자가 특정 날짜의 학교 급식 식단을 조회하면, 기간내 식단및 음식별 알러지 정보와 식단별 가장 많이 포함된 영양소 3개와 가장 적게 포함된 영양소 3개를 제시합니다.
+    - 추가적으로 기간별 누적 영양성분 그래프 형식을 제시해 시각적인 데이터를 추출할 수 있도록 제시합니다.
+
+  - 사용 OPEN API
+
+    - [급식식단정보](https://open.neis.go.kr/portal/data/service/selectServicePage.do?page=1&rows=10&sortColumn=&sortDirection=&infId=OPEN17320190722180924242823&infSeq=2)
+    - [학교기본정보](https://open.neis.go.kr/portal/data/service/selectServicePage.do?page=1&rows=10&sortColumn=&sortDirection=&infId=OPEN17020190531110010104913&infSeq=1)
+
+  - URL : http://localhost:3000/home-newsletter
+  - TYPE : GET
+  - QUERT
+    - schoolName : 학교명
+    - lctnName : 시도명 주의- **반드시 '대전광역시'와 같이 시도를 정확히 기제 필요**
+    - schoolKind : 학교종류명
+    - startDate : 검색 기간 시작일
+    - endDate : 검색 기간 종료일
+  - RESPONSE
+
+  ```json
+  {
+    //메뉴리스트
+    "mealInfoList": {
+         {
+            //메뉴정보
+            "menu": [
+                {
+                    "menuName": "누룽지", //메뉴명
+                    "allergenInfo": [] //알러지 성분
+                }
+            ],
+            //영양소
+            "nutrient": {
+                //높은 영양소 TOP3
+                "high": [
+                    {
+                        "nutrient": "칼슘(mg)",
+                        "value": "200.1"
+                    },
+                ],
+                //낮은 영양소 TOP3
+                "low": [
+                    {
+                        "nutrient": "철분(mg)",
+                        "value": "3.5"
+                    },
+                ]
+            }
+        }
+    },
+    //기간별 누적 영양성분 그래프 정보
+    "accumulationNutrientGraph": {
+      "title": [],
+      "values": []
+    }
+  }
+  ```
 
 ## 문제3
 
