@@ -99,6 +99,69 @@ export class HomeNewsletterService {
     return schoolInfo;
   }
 
+  //NOTE: 음식 정보 파싱
+  private parseMenuInfo(mealInfo: any) {
+    return mealInfo.DDISH_NM.split('<br/>').map((item) => item.trim());
+  }
+
+  //NOTE: 알레르기 정보 파싱
+  private parseAllergyInfo(mealInfo: any, menu: string[]) {
+    const allergyInfo = mealInfo.ORPLC_INFO.split('<br/>').map((item) => {
+      const [food, allergy] = item.split(' : ');
+      return { food, allergy };
+    });
+
+    return menu.map((item) => {
+      const menuName = item.split('(')[0].trim();
+      const matches = item.match(/\(([0-9.,]+)\)/);
+
+      if (!matches || !matches[1]) {
+        return {
+          menuName,
+          allergenInfo: [],
+        };
+      }
+
+      const allergenNumbers = matches[1]
+        .split('.')
+        .map((num) => parseInt(num))
+        .filter((num) => !isNaN(num))
+        .sort((a, b) => a - b);
+
+      const allergenInfo = allergenNumbers.map(
+        (num) => allergyInfo[num - 1].food,
+      );
+      return { menuName, allergenInfo };
+    });
+  }
+
+  //NOTE: 영양 정보 파싱
+  private parseNutrientInfo(mealInfo: any) {
+    const nutrientInfo = mealInfo.NTR_INFO.split('<br/>')
+      .map((item) => {
+        const [nutrient, value] = item.split(' : ');
+        return { nutrient, value };
+      })
+      .sort((a, b) => b.value - a.value);
+
+    return {
+      high: nutrientInfo.slice(0, 3), //높은 영양소 3개
+      low: nutrientInfo.slice(nutrientInfo.length - 3), //낮은 영양소 3개
+    };
+  }
+
+  //NOTE: 기간 내 영양 누적 그래프 생성
+  private createAccumulationNutrientGraph(accumulationNutrientInfo: any) {
+    return Object.keys(accumulationNutrientInfo).reduce(
+      (acc, key) => {
+        acc.title.push(key);
+        acc.values.push(accumulationNutrientInfo[key].toFixed(1));
+        return acc;
+      },
+      { title: [], values: [] },
+    );
+  }
+
   /**
    * TODO: 학교 코드를 전달받아 "음식 정보"를 반환 로직 테스트
    * OPEN API URL : https://open.neis.go.kr/hub/mealServiceDietInfo
@@ -107,7 +170,7 @@ export class HomeNewsletterService {
    */
   async getHomeNewsletter(homeNewsletterDto: HomeNewsletterDto) {
     try {
-      console.log(homeNewsletterDto);
+      // console.log(homeNewsletterDto);
       const { schoolName, lctnName, schoolKind, startDate, endDate } =
         homeNewsletterDto;
       const schoolInfo = await this.getSchoolCode({
@@ -135,6 +198,7 @@ export class HomeNewsletterService {
       );
 
       /**
+       * 
        * {
             "mealServiceDietInfo": [
                 {
@@ -175,9 +239,44 @@ export class HomeNewsletterService {
         }
        */
 
-      //   console.log(response.data);
+      const accumulationNutrientInfo = {};
+      //NOTE: 기간 내 모든 음식 정보 조회
+      const mealInfoList = response.data.mealServiceDietInfo[1].row.map(
+        (item) => {
+          //NOTE: 음식 정보 파싱
+          const menu = this.parseMenuInfo(item);
+          //NOTE: 알레르기 정보 파싱
+          const menuAllergyInfo = this.parseAllergyInfo(item, menu);
+          //NOTE: 영양 정보 파싱
+          const nutrientInfo = this.parseNutrientInfo(item);
 
-      return response.data;
+          //NOTE: 기간 내 영양 정보 누적
+          const nutrientInfoList = item.NTR_INFO.split('<br/>').map((item) => {
+            const [nutrient, value] = item.split(' : ');
+            return { nutrient, value };
+          });
+
+          nutrientInfoList.forEach((item) => {
+            if (accumulationNutrientInfo[item.nutrient]) {
+              accumulationNutrientInfo[item.nutrient] += +item.value;
+            } else {
+              accumulationNutrientInfo[item.nutrient] = +item.value;
+            }
+          });
+
+          return {
+            menu: menuAllergyInfo,
+            nutrient: nutrientInfo,
+          };
+        },
+      );
+
+      //NOTE: 기간 내 영양 누적 그래프 생성
+      const accumulationNutrientGraph = this.createAccumulationNutrientGraph(
+        accumulationNutrientInfo,
+      );
+
+      return { mealInfoList, accumulationNutrientGraph };
     } catch (error) {
       //XXX: 예외 처리 추가 필요
       console.error('Error fetching food info:', error);
