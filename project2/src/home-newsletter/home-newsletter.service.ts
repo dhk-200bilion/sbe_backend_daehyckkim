@@ -21,6 +21,10 @@ export class HomeNewsletterService {
     const url = 'https://open.neis.go.kr/hub/schoolInfo';
     const apiKey = process.env.NEIS_API_ACCESS_KEY;
 
+    if (!apiKey) {
+      throw new Error('NEIS API 키가 설정되지 않았습니다.');
+    }
+
     const response = await firstValueFrom(
       this.httpService.get(url, {
         params: {
@@ -181,6 +185,10 @@ export class HomeNewsletterService {
 
       const url = 'https://open.neis.go.kr/hub/mealServiceDietInfo';
       const apiKey = process.env.NEIS_API_ACCESS_KEY;
+
+      if (!apiKey) {
+        throw new Error('NEIS API 키가 설정되지 않았습니다.');
+      }
 
       const response = await firstValueFrom(
         this.httpService.get(url, {
